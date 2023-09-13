@@ -1,0 +1,13 @@
+{
+  "name": "domage",
+  "version": "0.0.1",
+  "description": "Do stuff with the DOM things.",
+  "author": "Square Blue Dev",
+  "license": "MIT",
+  "keywords": [],
+  "main": "main.js",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  }
+}
