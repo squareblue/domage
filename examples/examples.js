@@ -1,4 +1,4 @@
-import '../src/domage.js';
+import '../main.js';
 import { devmode } from '../src/domageUtils.js';
 
 ((domage) => {
