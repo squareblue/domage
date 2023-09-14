@@ -1,4 +1,15 @@
-import { appendable, isArray, isElement, isFragment, isFunction, isNode, isString } from './domageUtils.js';
+import {
+  appendable,
+  devmode,
+  isArray,
+  isElement,
+  isFragment,
+  isFunction,
+  isNode,
+  isPlainObject,
+  isString,
+  splitClass
+} from './domageUtils.js';
 import { parseRE, parseTag } from './parseTag.js';
 
 /**
@@ -8,6 +19,8 @@ import { parseRE, parseTag } from './parseTag.js';
 
 export const ___HTML___ = '___HTML___';
 const re_HTML = new RegExp(`^\s*${___HTML___}\s*`);
+
+let counter = 0;
 
 export class Domage {
   tag = '';
@@ -19,9 +32,23 @@ export class Domage {
   static #fns = {};
 
   constructor(tag = '', props = {}, children = '') {
+    const _this = this; // ensure proper scope?
+
     this.tag = tag;
     this.props = props;
     this.children = children;
+
+    // Keep track of callable 'props' methods
+    Object.assign(Domage.#fns, {
+      attr: _this.attr,
+      prop: _this.prop,
+      style: _this.style,
+      css: _this.css,
+      className: _this.className,
+      text: _this.text,
+      ___HTML___: _this.___HTML___,
+      append: _this.append,
+    });
 
     if (isElement(tag)) {
       this.element = tag;
@@ -36,24 +63,13 @@ export class Domage {
     } else {
       this.element = document.createElement(this.tag);
     }
-    const _this = this; // ensure proper scope?
-    // Keep track of callable 'props' methods
-    Object.assign(Domage.#fns, {
-      attr: _this.attr,
-      prop: _this.prop,
-      style: _this.style,
-      css: _this.css,
-      className: _this.className,
-      text: _this.text,
-      ___HTML___: _this.___HTML___,
-      append: _this.append,
-    });
   }
 
   /**
-   *
-   * @param element
-   * @param value
+   * If `value` is a function, execute and use its return value,
+   * otherwise use `value` directly.
+   * @param {Node} element
+   * @param {Function|*} value
    * @returns {*}
    * @private
    */
@@ -167,13 +183,13 @@ export class Domage {
   }
 
   addClass(cls) {
-    [].concat(cls).join(' ').split(/\s+/).forEach(className => {
+    splitClass(cls).forEach(className => {
       this.element && this.element.classList.add(className);
     });
   }
 
   removeClass(cls) {
-    [].concat(cls).join(' ').split(/\s+/).forEach(className => {
+    splitClass(cls).forEach(className => {
       this.element && this.element.classList.remove(className);
     });
   }
@@ -244,6 +260,11 @@ export class Domage {
       return parent;
     }
 
+    if (isPlainObject(child)) {
+      parent.appendChild(Domage.create(child).get());
+      return parent;
+    }
+
     if (isNode(child)) {
       parent.appendChild(child);
       return parent;
@@ -253,6 +274,14 @@ export class Domage {
       parent.appendChild(child.get());
       return parent;
     }
+
+    // try {
+    //   parent.appendChild(Domage.create(child).get());
+    //   return parent;
+    // } catch (e) {
+    //   console.warn('Could not append:\n', child);
+    // }
+
   }
 
   append(child) {
@@ -266,7 +295,13 @@ export class Domage {
 
   /**
    * Main element creation static method
-   * @param {string|Array} $tag
+   * @typedef {{
+   *    tag: string,
+   *    props: Object|Children,
+   *    children: Children,
+   *    [k: string]: *
+   *  }} TagObject
+   * @param {string|Array|TagObject} $tag
    * @param {Object|Children} [$props]
    * @param {Children} [$children]
    * @returns {Domage}
@@ -276,9 +311,22 @@ export class Domage {
     let props = $props;
     let children = $children;
 
-    if (isArray(tag)) {
-      [tag, props = {}, children = ''] = tag;
+    devmode(() => {
+      console.log('Domage.create()');
+      counter += 1;
+    });
+
+    if (isArray($tag)) {
+      [tag, props = {}, children = ''] = $tag;
+    } else if (isPlainObject($tag)) {
+      (tag = $tag.tag || '') && delete $tag.tag;
+      (props = isPlainObject($tag.props) ? $tag.props : {}) && delete $tag.props;
+      (children = $tag.children || '') && delete $tag.children;
+      // Assign 'leftover' properties to `props`
+      Object.assign(props, $tag);
     }
+
+    devmode() && console.log('tag', tag || '#document-fragment');
 
     // `props` argument could actually be `children`
     if (isArray(props) || appendable(props)) {
@@ -286,21 +334,32 @@ export class Domage {
       props = {};
     }
 
-    let attr = {};
+    let attr;
 
     // Pull out attribute 'shortcuts'
     if (parseRE.test(tag)) {
       [tag, attr] = parseTag(tag);
     }
 
-    props.attr = {
-      ...attr,
-      ...props.attr
-    };
+    if (props.attr || attr) {
+      props.attr = {
+        ...attr,
+        ...props.attr
+      };
+    }
+
+    // console.log('tag', tag);
+    // console.log('props', props);
+    // console.log('children', children);
 
     const d$ = new Domage(tag, props, children);
 
     for (let [method, ...args] of Object.entries(props)) {
+      // Handle props with defined methods
+      if (Domage.#hasMethod(method)) {
+        d$[method](...args);
+        continue;
+      }
       // Handle $attr shortcut
       if (method.startsWith('$')) {
         d$.attr({
@@ -313,16 +372,13 @@ export class Domage {
         d$.prop({
           [method.slice(1)]: args
         });
-        continue;
-      }
-      // Handle all other props
-      if (Domage.#hasMethod(method)) {
-        d$[method](...args);
       }
     }
 
-    for (const child of [].concat(children)) {
-      d$.append(child);
+    if (children) {
+      for (const child of [].concat(children)) {
+        if (child) d$.append(child);
+      }
     }
 
     return d$;
@@ -369,7 +425,7 @@ export class Domage {
 
 /**
  * Main exposed function.
- * @param {string|[string, Object|Children, Children]} argd
+ * @param {string|[string, Object|Children, Children]|Object} argd
  * @param {string|Node|document} [context]
  * @returns {Domage|Node}
  */
@@ -379,6 +435,9 @@ export function d$(argd, context = document) {
   }
   if (isString(argd)) {
     return dquery(argd, context).get();
+  }
+  if (isPlainObject(argd)) {
+    return Domage.create(argd);
   }
   return Domage.create(...arguments);
 }
@@ -390,12 +449,15 @@ d$.render = Domage.render;
 const selectorMap = {
   '^/': getElement,
   '$/': getElement,
+  '**': getElements,
   '*/': getElements,
   '//': getElements,
   '$$': getElements,
   'id:': getById,
   '#/': getById,
   'class:': getByClass,
+  '..': getByClass,
+  '.:': getByClass,
   './': getByClass,
   '</': getByTag,
   '~/': getByTag,
@@ -404,7 +466,7 @@ const selectorMap = {
 };
 
 const selectorPrefixes = Object.keys(selectorMap);
-console.log('selectorPrefixes', selectorPrefixes);
+devmode() && console.log('selectorPrefixes', selectorPrefixes);
 
 /**
  * Get the minimum and maximum lengths of the prefix strings (keys) above
@@ -415,9 +477,9 @@ const prefixLengths = selectorPrefixes.reduce(([min, max], key) => {
     key.length < min ? key.length : min,
     key.length > max ? key.length : max
   ];
-}, [32, 0]);
+}, [99, -99]);
 
-console.log('prefixLengths', prefixLengths);
+devmode() && console.log('prefixLengths', prefixLengths);
 
 function slicePrefix(selector, prefixLength) {
   const sliceAt = (-selector.length + prefixLength);
@@ -513,6 +575,7 @@ function getByClass(className, context) {
     selector = `.${classes.join('.')}`;
     queryFn = 'querySelectorAll';
   }
+  // ...maybe just use dq.getElements('.foo.bar.baz')?
   return [...resolveContext(context)[queryFn](selector)];
 }
 dq.getByClass = getByClass;
@@ -539,6 +602,8 @@ dq.byAttr = getByAttribute;
 
 d$.dq = dq;
 d$.dquery = dq;
+
+d$.getCount = () => counter;
 
 export const dquery = dq;
 export default d$;

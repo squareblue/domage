@@ -1,4 +1,5 @@
 import '../src/domage.js';
+import { devmode } from '../src/domageUtils.js';
 
 ((domage) => {
   const d$ = domage;
@@ -12,9 +13,15 @@ import '../src/domage.js';
     ['header', [
       Inner([
         ['h1', 'Hello world!'],
-        ['small', 'What do you want?'],
-        ['br'],
+        ['p', [
+          ['small', [
+            'What do you want?',
+            ' ',
+            ['i', 'Nothing???']
+          ]],
+        ]],
         ['hr'],
+        { ___HTML___: 'Some <i>html</i> for the thing?' },
         ['ul#foo-bar-baz', [
           ['li.foo', 'Foo'],
           ['li.bar', 'Bar'],
@@ -33,11 +40,11 @@ import '../src/domage.js';
   d$.create('h2', 'What is up???').appendTo(output_);
   d$.create('small', 'Nope.').appendTo('id:foo-id');
 
-  dq('class: multi class')
+  dq('//.multi.class')
     .get()
     .insertAdjacentHTML('afterbegin', '<h2>Multi Class</h2>');
 
-  const multiClass = dq('.multi.class').get();
+  const multiClass = dq('..multi.class').get();
 
   const multiClassD = d$(multiClass);
 
@@ -57,6 +64,8 @@ import '../src/domage.js';
       margin: '0 auto',
       padding: '20px 0'
     }
-  })
+  });
+
+  devmode(() => console.log('Created:', d$.getCount()));
 
 })(window.domage);

@@ -50,11 +50,12 @@ export const createRE = /^[\s<+=]*|[/>\s]*$/g;
 export function parseTag(tag = '') {
   // Don't try to handle fragments - they have no attributes.
   if (tag === '' || fragRE.test(tag)) {
-    return ['', {}];
+    return ['', null];
   }
 
   if (!parseRE.test(tag)) {
-    return [tag, {}];
+    // Return early if no shorthand values
+    return [tag, null];
   }
 
   let tagName, type, id, classes, name, tagAttrs;
@@ -67,10 +68,11 @@ export function parseTag(tag = '') {
   [tagName, id] = tagName.split('#');
   [tagName, type] = tagName.split(':');
 
-  // Attributes object
-  const attr = {};
+  // Future attributes object
+  let attr = null;
 
   if (tagAttrs.length) {
+    attr = {};
     for (const tagAttr of tagAttrs) {
       let [name, value = ''] = tagAttr.split('=');
       // Only handle attributes with a non-empty attribute name
@@ -80,14 +82,16 @@ export function parseTag(tag = '') {
     }
   }
 
-  if (name) attr.name = name;
-  if (classes.length) attr['class'] = classes.join(' ');
-  if (id) attr.id = id;
-  if (type) attr.type = type;
+  // The `attr` object is *tiny* so making copies shouldn't be a problem
+  if (name) attr = { ...attr, name };
+  if (classes.length) attr = { ...attr, ['class']: classes.join(' ') };
+  if (id) attr = { ...attr, id };
+  if (type) attr = { ...attr, type };
 
   return [tagName, attr];
 }
-// Adding a default export, but using the named export is preferred.
+
+// Default export provided for convenience, but using named exports is preferred.
 export default parseTag;
 
 /**

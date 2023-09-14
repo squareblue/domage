@@ -2,6 +2,9 @@
  * General utility functions
  */
 
+// Be nothing.
+let undef;
+
 const objectString = (obj) => Object.prototype.toString.call(obj);
 
 const oObj = objectString({});
@@ -28,14 +31,14 @@ export function isNumber(num) {
 
 export function isElement(it) {
   return (
-    it.nodeType && it.nodeType === Node.ELEMENT_NODE
+    it != null && it.nodeType && it.nodeType === Node.ELEMENT_NODE
     || it instanceof Element
   );
 }
 
 export function isFragment(it) {
   return (
-    it.nodeType && it.nodeType === Node.DOCUMENT_FRAGMENT_NODE
+    it != null && it.nodeType && it.nodeType === Node.DOCUMENT_FRAGMENT_NODE
     || it instanceof DocumentFragment
   );
 }
@@ -48,7 +51,7 @@ export function isNode(it) {
 
 export function isTextNode(it) {
   return (
-    it.nodeType && it.nodeType === Node.TEXT_NODE
+    it != null && it.nodeType && it.nodeType === Node.TEXT_NODE
     || it instanceof Text
   );
 }
@@ -78,9 +81,13 @@ export function camelCase(str) {
   return str.replace(/-./g, (match) => match.slice(1).toUpperCase());
 }
 
+export function splitClass(className) {
+  return [].concat(className).join(' ').split(/\s+/);
+}
+
 export function devmode(fn) {
   if (/devmode/i.test(window.location.hash)) {
-    if (isFunction(fn)) fn();
+    if (fn && isFunction(fn)) fn();
     return true;
   }
   return false;
