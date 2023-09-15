@@ -5,6 +5,9 @@
 // Be nothing.
 let undef;
 
+// Do nothing.
+export const nope = () => null;
+
 const objectString = (obj) => Object.prototype.toString.call(obj);
 
 const oObj = objectString({});
@@ -31,14 +34,14 @@ export function isNumber(num) {
 
 export function isElement(it) {
   return (
-    it != null && it.nodeType && it.nodeType === Node.ELEMENT_NODE
+    it && it.nodeType && it.nodeType === Node.ELEMENT_NODE
     || it instanceof Element
   );
 }
 
 export function isFragment(it) {
   return (
-    it != null && it.nodeType && it.nodeType === Node.DOCUMENT_FRAGMENT_NODE
+    it && it.nodeType && it.nodeType === Node.DOCUMENT_FRAGMENT_NODE
     || it instanceof DocumentFragment
   );
 }
