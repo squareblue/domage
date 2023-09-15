@@ -2,14 +2,47 @@
 
 <small>DOM damage? _(performance unknown)_</small>
 
-Seemingly stable functionality for creating and selecting actual DOM nodes,
-allowing for programmatically creating UI elements on-the-fly. 🤷‍♂️ 
+Basic functionality for creating and selecting actual DOM nodes,
+allowing for programmatically creating and modifying UI elements on-the-fly.
 Usage is similar to `React.createElement()` or something like `h` in SolidJS, 
 with a few differences/enhancments for convenience, like attribute shorthand for
-the tag parameter, and more explicit setting of attributes, properties,
-and event listeners (rather than lumping everything together as `props`).
+the tag parameter, and more explicit _(delcarative?)_ setting of attributes, properties,
+data attributes, and event listeners (rather than lumping everything together as `props`).
 
-Anatomy of `d$.create()` function parameters:
+Basic anatomy of `d$.create()` function parameters:
+
+```js
+// Define the parameters:
+const args = [
+  'tag#id.a.b.c|attr=X|etc=values|required',
+  { attr: { foo: 'A' }, $bar: 1, _prop: 'C' },
+  // Note nested array for children...
+  [
+    ['p.child', 'Child paragraph.'], 
+    ['hr']
+  ]
+];
+// Render to the <body> 
+// .render() method *replaces* all child elements of target:
+d$.create(...args).render(document.body);
+// You can also *append* to an existing DOM node:
+d$.create(...args).appendTo(document.body);
+```
+
+> Notice the 'nested' array syntax above. The outer array is the container for _all_
+> of the children for the current element, the inner arrays define the child elements
+> and/or text nodes _(inserting an HTML string is possible using a special prefix)_.
+
+```html
+<body>
+<tag id="id" class="a b c" attr="X" etc="values" required foo="A" bar="1">
+    <p class="child">Child paragraph.</p>
+    <hr>
+</tag>
+</body>
+```
+
+A more complex example:
 
 ```js
 // For non-input elements, using shorthand syntax
@@ -61,15 +94,39 @@ d$.create(
 );
 ```
 
-Input `<input>` elements can also use shorthand for `:type` and `?name` attributes:
+Form elements like `<input>`, `<select>` and `<textarea>` can also use 
+shorthand for `:type` and `?name` attributes.
 
 ```js
-d$.create(
+const input = d$.create(
   'input:text#id.a.b.c?name|value=foo|required'
+);
+const select = d$.create(
+  'select?country|value=United States|required',
+  [
+    // quotes are optional for attribute values
+    // boolean attributes use their name as the value
+    ['option|value=United States|selected'],
+    // double-quotes are allowed
+    [`option|value="Canada"`],
+    // single-quotes are allowed
+    [`option|value='Mexico'`],
+    // *values* with quotation marks *must* have outer quotes 
+    // ...using proper syntax for nested quotes
+    [`option|value="'etc...'"`] 
+  ]
 );
 ```
 ```html
 <input type="text" id="id" class="a b c" name="name" value="foo" required/>
+<select name="country" required>
+    <!-- textContent falls back to 'value' -->
+    <option value="United States" selected="selected">United States</option>
+    <option value="Canada">Canada</option>
+    <option value="Mexico">Mexico</option>
+    <!-- inner quotes are preserved -->
+    <option value="'etc...'">'etc...'</option>
+</select>
 ```
 
 Most basic usage example:
@@ -86,14 +143,15 @@ d$.create('a#ur-link.pretty-link|href=/path/to/page', 'Click Me!')
 </div>
 ```
 
-You can call `d$` directly, but you must use an array containing the required
-parameters as the single function argument. You can also save a reference to the created instance for later manipulation.
+You can call `d$()` directly, rather than `d$.create()`, to create a new element/tree, 
+but you must use an array containing the required parameters as the single function 
+argument. You can also save a reference to the created instance for later manipulation.
 
 ```js
 import d$ from 'domage';
 
-// Function params array
-const params = [
+// Use an array with the paramaters, and save a reference to the instance
+const coolP = d$([
   // shorthand for adding id, class and title attributes
   'p#thing.is.cool|title=Cool Thing',
   // add an attribute using the '$' prefix
@@ -106,25 +164,48 @@ const params = [
       ['li', 'B'],
       ['li', 'C']
     ]]
-  ]  
-];
-
-// Save a reference
-const coolDiv = d$(params);
+  ]
+]);
 
 // Later... add an attribute based on some condition
 // using the `.attr()` instance method
 if (someCondition) {
-  coolDiv.attr({
-    'data-thing': 'Stuff'
+  coolP.data({
+    'thing': 'Stuff'
   });
 }
 
-coolDiv.render(document.body);
+// Write the <p> to the DOM (it will be updated below)
+coolP.render(document.body);
+
+// Define the element to be appended as a parameter array:
+const itsCoolParams = ['div.its-all-cool', [
+  ['i', 'Loading...'] // Initial content
+]];
+
+const coolLoadDiv = d$(itsCoolParams);
+
+// Insert coolLoadDiv into coolP
+coolP.append(coolLoadDiv);
+
+// Render after a timeout or async function call
+(async () => {
+  const resp = await fetch('/some/data/url');
+  const txt = await resp.text();
+  if (txt === 'cool') {
+    setTimeout(() => {
+      // Replace contents of `coolLoadDiv` after loading and timeout
+      coolLoadDiv.replace(['b', "It's cool!!!"]);
+    }, 1000);
+  }
+})();
 ```
-> Generated elements have their own instance methods for manipulating
+
+> Generated elements have their own chainable instance methods for manipulating
 > the generated element. The functionality and syntax is similar to `jQuery` - 
-> like `.attr()`, `.prop()`, `.addClass()` and `.removeClass()`.
+> like `.attr({})`, `.prop({})`, `.addClass('')`, `.removeClass('')`, 
+> and `.data({})` (or `.dataset({})`). You can also append child elements or
+> parameter arrays after the parent has been instantiated and inserted into the DOM.
 
 Will generate the HTML below (if `someCondition` is `true`):
 
@@ -137,6 +218,12 @@ Will generate the HTML below (if `someCondition` is `true`):
         <li>B</li>
         <li>C</li>
     </ul>
+    <div class="its-all-cool">
+        <!-- before -->
+        <i>Loading...</i>
+        <!-- after -->
+        <b>It's cool!!!</b>
+    </div>
 </p>
 </body>
 ```
