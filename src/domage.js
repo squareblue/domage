@@ -404,7 +404,7 @@ export class Domage {
     let attr;
 
     // Pull out attribute 'shortcuts'
-    if (parseRE.test(tag)) {
+    if (isString(tag) && parseRE.test(tag)) {
       [tag, attr] = parseTag(tag);
     }
 
@@ -463,6 +463,11 @@ export class Domage {
     } else {
       renderTarget.replaceChildren(toRender);
     }
+
+    // Domage.empty(renderTarget);
+    // Domage.append(renderTarget, toRender);
+
+    return renderTarget;
   }
   static renderTo = Domage.render;
 
@@ -513,6 +518,10 @@ export function d$(argd, context = document) {
 
 d$.create = Domage.create;
 d$.render = Domage.render;
+
+//////////////////////////////////////////////////
+////////// dquery ////////////////////////////////
+//////////////////////////////////////////////////
 
 // Map custom speedy selectors to their functions
 const selectorMap = {
@@ -574,6 +583,14 @@ function selectElements(selector, selectFn, context) {
     : [].concat(selectFn(selector, context))
 }
 
+function dqResult(selected) {
+  return {
+    all: () => selected,
+    get: (idx) => selected[idx || 0],
+    exe: (fn) => fn(selected)
+  };
+}
+
 /**
  * Select DOM elements using optional special syntax.
  * @param {string} selector
@@ -581,6 +598,10 @@ function selectElements(selector, selectFn, context) {
  * @returns {*}
  */
 export function dq(selector, context = document) {
+  devmode() && console.log('dq', selector);
+  if (isElement(selector)) {
+    return dqResult([selector]);
+  }
   let [prefixMin, prefixMax] = prefixLengths;
   let selectFn = nope;
   let trimmedSelector = selector.trim();
@@ -603,11 +624,7 @@ export function dq(selector, context = document) {
   // TODO: use class instead so we can have an .update() function
   //  that pushes the new items into the `selected` array.
   //  class DQ { all; get; exe; refresh; }
-  return {
-    all: () => selected,
-    get: (idx) => selected[idx || 0],
-    exe: (fn) => fn(selected)
-  };
+  return dqResult(selected);
 }
 
 // Example:
