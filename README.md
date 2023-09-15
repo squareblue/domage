@@ -29,7 +29,7 @@ d$.create(...args).render(document.body);
 d$.create(...args).appendTo(document.body);
 ```
 
-> Notice the 'nested' array syntax above. The outer array is the container for _all_
+> Notice the 'nested' arrays above. The outer array is the container for _all_
 > of the children for the current element, the inner arrays define the child elements
 > and/or text nodes _(inserting an HTML string is possible using a special prefix)_.
 
@@ -105,28 +105,36 @@ const select = d$.create(
   'select?country|value=United States|required',
   [
     // quotes are optional for attribute values
-    // boolean attributes use their name as the value
+    // boolean attributes like 'selected' use their name as the value
     ['option|value=United States|selected'],
     // double-quotes are allowed
     [`option|value="Canada"`],
     // single-quotes are allowed
     [`option|value='Mexico'`],
     // *values* with quotation marks *must* have outer quotes 
-    // ...using proper syntax for nested quotes
+    // ...using standard syntax for nested quotes
     [`option|value="'etc...'"`] 
   ]
 );
+
+const someForm = d$.create('form#some-form', [input, select]);
+
+d$.render(someForm, '#form-container');
 ```
 ```html
-<input type="text" id="id" class="a b c" name="name" value="foo" required/>
-<select name="country" required>
-    <!-- textContent falls back to 'value' -->
-    <option value="United States" selected="selected">United States</option>
-    <option value="Canada">Canada</option>
-    <option value="Mexico">Mexico</option>
-    <!-- inner quotes are preserved -->
-    <option value="'etc...'">'etc...'</option>
-</select>
+<div id="form-container">
+    <form id="some-form">
+        <input type="text" id="id" class="a b c" name="name" value="foo" required />
+        <select name="country" required>
+            <!-- textContent falls back to 'value' -->
+            <option value="United States" selected="selected">United States</option>
+            <option value="Canada">Canada</option>
+            <option value="Mexico">Mexico</option>
+            <!-- inner quotes are preserved -->
+            <option value="'etc...'">'etc...'</option>
+        </select>
+    </form>
+</div>
 ```
 
 Most basic usage example:
@@ -147,10 +155,16 @@ You can call `d$()` directly, rather than `d$.create()`, to create a new element
 but you must use an array containing the required parameters as the single function 
 argument. You can also save a reference to the created instance for later manipulation.
 
+> Generated elements have their own chainable instance methods for manipulating
+> the generated element. The functionality and syntax is similar to `jQuery` -
+> like `.attr({})`, `.prop({})`, `.addClass('')`, `.removeClass('')`,
+> and `.data({})` (or `.dataset({})`). You can also append child elements or
+> parameter arrays after the parent has been instantiated and inserted into the DOM.
+
 ```js
 import d$ from 'domage';
 
-// Use an array with the paramaters, and save a reference to the instance
+// Use a parameter array and save a reference to the instance
 const coolP = d$([
   // shorthand for adding id, class and title attributes
   'p#thing.is.cool|title=Cool Thing',
@@ -200,15 +214,6 @@ coolP.append(coolLoadDiv);
   }
 })();
 ```
-
-> Generated elements have their own chainable instance methods for manipulating
-> the generated element. The functionality and syntax is similar to `jQuery` - 
-> like `.attr({})`, `.prop({})`, `.addClass('')`, `.removeClass('')`, 
-> and `.data({})` (or `.dataset({})`). You can also append child elements or
-> parameter arrays after the parent has been instantiated and inserted into the DOM.
-
-Will generate the HTML below (if `someCondition` is `true`):
-
 ```html
 <body>
 <p id="thing" class="is cool" title="Cool Thing" data-id="102938" data-thing="Stuff">
