@@ -13,11 +13,6 @@ import {
 } from './domageUtils.js';
 import { parseRE, parseTag } from './parseTag.js';
 
-/**
- * Types
- * @typedef {Array|Node|string|number|Domage|Children[]} Children
- */
-
 export const ___HTML___ = '___HTML___';
 const re_HTML = new RegExp(`^\s*${___HTML___}\s*`);
 
@@ -69,12 +64,12 @@ export class Domage {
   /**
    * If `value` is a function, execute and use its return value,
    * otherwise use `value` directly.
-   * @param {Node} element
    * @param {Function|*} value
+   * @param {Node} [element]
    * @returns {*}
    * @private
    */
-  static #asValue(element, value) {
+  static #asValue(value, element) {
     return (
       typeof value === 'function'
         ? value(element)
@@ -92,7 +87,7 @@ export class Domage {
     if (isElement(element)) {
       for (const [name, value] of Object.entries(obj)) {
         try {
-          element.setAttribute(name, String(Domage.#asValue(element, value)));
+          element.setAttribute(name, String(Domage.#asValue(value, element)));
         } catch (e) {
           console.error(`Error setting attribute '${name}' to value ${value}.\n`, e);
         }
@@ -118,7 +113,7 @@ export class Domage {
     if (isElement(element)) {
       for (const [prop, value] of Object.entries(obj)) {
         try {
-          element[prop] = Domage.#asValue(element, value);
+          element[prop] = Domage.#asValue(value, element);
         } catch (e) {
           console.error(`Error setting property '${prop}' to value '${value}'.\n`, e);
         }
@@ -147,7 +142,7 @@ export class Domage {
           element.setAttribute('style', css);
         } else {
           for (const [prop, value] of Object.entries(css)) {
-            element.style[prop] = Domage.#asValue(element, value);
+            element.style[prop] = Domage.#asValue(value, element);
           }
         }
       } catch (e) {
@@ -170,11 +165,11 @@ export class Domage {
   /**
    * Add className to element
    * @param {HTMLElement} element
-   * @param {string} cls
+   * @param {string|Function} cls
    * @returns {HTMLElement}
    */
   static className(element, cls) {
-    element.className = cls;
+    element.className = Domage.#asValue(cls, element);
     return element;
   }
 
@@ -196,6 +191,45 @@ export class Domage {
   }
 
   /**
+   * Add [data-*] attributes to element (using `dataset` property)
+   * @param {HTMLElement} element
+   * @param {Object|Function} dataObj
+   * @returns {*}
+   */
+  static dataset(element, dataObj = {}) {
+    if (isElement(element)) {
+      let obj = isFunction(dataObj)
+        ? dataObj(element)
+        : dataObj;
+
+      if (!isPlainObject(obj)) {
+        // Return early if we're not working with an object
+        console.warn('Not an object.', obj);
+        return element;
+      }
+
+      try {
+        for (const [prop, value] of Object.entries(dataObj)) {
+          element.dataset[prop] = Domage.#asValue(value, element);
+        }
+      } catch (e) {
+        console.error(`Could not set [data-*] attribute(s).`, e);
+      }
+    }
+    else {
+      console.warn(`Not an HTMLElement.`, element);
+    }
+    return element;
+  }
+  static data = Domage.dataset;
+
+  dataset(dataObj) {
+    this.element = Domage.dataset(this.element, dataObj);
+    return this;
+  }
+  data = this.dataset;
+
+  /**
    * Get or set the `textContent` of an element
    * @param {Element|DocumentFragment} container
    * @param {string|*} txt
@@ -205,7 +239,7 @@ export class Domage {
     if (typeof txt !== 'string') {
       return container.textContent;
     }
-    container.textContent = String(Domage.#asValue(container, txt));
+    container.textContent = String(Domage.#asValue(txt, container));
     return container;
   }
 
@@ -290,19 +324,51 @@ export class Domage {
     return this;
   }
 
+  static empty(container) {
+    Domage.___HTML___(container, '');
+    return container;
+  }
+
+  empty() {
+    Domage.empty(this.get());
+    return this;
+  }
+
+  static replace(container, children){
+    Domage.empty(container);
+    Domage.append(container, children);
+    return container;
+  }
+  static replaceChildren = Domage.replace;
+
+  replace(children) {
+    this.empty();
+    this.append(children);
+    return this;
+  }
+  replaceChildren = this.replace;
+
   static #hasMethod(method) {
     return isFunction(Domage.#fns[method]);
   }
 
   /**
-   * Main element creation static method
+   * Types
    * @typedef {{
    *    tag: string,
    *    props: Object|Children,
    *    children: Children,
    *    [k: string]: *
    *  }} TagObject
-   * @param {string|Array|TagObject} $tag
+   * @typedef {TagArg|TagArg[]} TagArgs
+   * @typedef {string|TagArgs|TagObject} TagArg
+   * @typedef {DomageArgs[]|Node|string|number|Domage|Children[]} Children
+   * @typedef {[string, Object, Children]} DomageArgs
+   */
+
+  /**
+   * Main element creation static method
+   * @param {TagArg} $tag
    * @param {Object|Children} [$props]
    * @param {Children} [$children]
    * @returns {Domage}
@@ -398,11 +464,13 @@ export class Domage {
       renderTarget.replaceChildren(toRender);
     }
   }
+  static renderTo = Domage.render;
 
   render(container) {
     Domage.render((this.element || this.fragment), container);
     return this;
   }
+  renderTo = this.render;
 
   appendTo(container) {
     const toRender = this.get();
