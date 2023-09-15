@@ -8,6 +8,7 @@ import {
   isNode,
   isPlainObject,
   isString,
+  nope,
   splitClass
 } from './domageUtils.js';
 import { parseRE, parseTag } from './parseTag.js';
@@ -492,6 +493,20 @@ function slicePrefix(selector, prefixLength) {
 }
 
 /**
+ * Always return an array of selected elements.
+ * @param {string} selector
+ * @param {Function} [selectFn]
+ * @param {string|Element|Document} [context]
+ * @returns {*[]}
+ */
+function selectElements(selector, selectFn, context) {
+  // getElement() and getById() always return a single element...
+  return (selectFn === getElement || selectFn === getById)
+    ? [selectFn(selector, context)]  /* ...so wrap it in an array. */
+    : [].concat(selectFn(selector, context))
+}
+
+/**
  * Select DOM elements using optional special syntax.
  * @param {string} selector
  * @param {string|Node|document} [context]
@@ -499,10 +514,10 @@ function slicePrefix(selector, prefixLength) {
  */
 export function dq(selector, context = document) {
   let [prefixMin, prefixMax] = prefixLengths;
-  let selectFn = null;
+  let selectFn = nope;
   let trimmedSelector = selector.trim();
   let parsedSelector = trimmedSelector;
-  while (prefixMax >= prefixMin && !selectFn) {
+  while (prefixMax >= prefixMin && selectFn === nope) {
     const parsed = slicePrefix(trimmedSelector, prefixMax);
     if (selectorMap[parsed.prefix]) {
       parsedSelector = parsed.selector;
@@ -510,8 +525,16 @@ export function dq(selector, context = document) {
     }
     prefixMax--;
   }
-  const selected = [].concat((selectFn || getElements)(parsedSelector, context));
-  // return with `.get()` and `.all()` methods
+  // Use updated selectFn, or if it's still nope(), use getElements instead
+  const selected = selectElements(
+    parsedSelector,
+    (selectFn !== nope) ? selectFn : getElements,
+    context
+  );
+  // return object with `.all()`, `.get()`, and `.exe()` methods
+  // TODO: use class instead so we can have an .update() function
+  //  that pushes the new items into the `selected` array.
+  //  class DQ { all; get; exe; refresh; }
   return {
     all: () => selected,
     get: (idx) => selected[idx || 0],
@@ -521,8 +544,12 @@ export function dq(selector, context = document) {
 
 // Example:
 export const selectorExamples = () => {
-  const fooId = dq('id:foo-id').get();
-  const barClass = dq('class:bar-class').all();
+  // Returns single element with [id="foo-id"]
+  // Uses *very* fast .getElementById('foo-id') under the hood.
+  const fooId = dq('#/foo-id').get();
+  // Returns array of elements with [class="bar-baz"] that are descendents of `fooId`
+  // Uses *very* fast .getElementsByClassName('bar-baz') under the hood.
+  const barBaz = dq('./bar-baz', fooId).all();
 };
 
 /**
