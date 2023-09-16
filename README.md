@@ -15,23 +15,24 @@ Basic anatomy of `d$.create()` function parameters:
 // Define the parameters:
 const args = [
   'tag#id.a.b.c|attr=X|etc=values|required',
-  { attr: { foo: 'A' }, $bar: 1, _prop: 'C' },
+  { attr: { foo: 'A' }, $bar: 1, _baz: 'C' },
   // Note nested array for children...
   [
     ['p.child', 'Child paragraph.'], 
-    ['hr']
+    ['hr'],
+    'Text node.'
   ]
 ];
 // Render to the <body> 
-// .render() method *replaces* all child elements of target:
-d$.create(...args).render(document.body);
-// You can also *append* to an existing DOM node:
+// You can *append* to an existing DOM node:
 d$.create(...args).appendTo(document.body);
+// Or use .render() method to *replace* all child elements of target:
+d$.create(...args).render(document.body);
 ```
 
-> Notice the 'nested' arrays above. The outer array is the container for _all_
-> of the children for the current element, the inner arrays define the child elements
-> and/or text nodes _(inserting an HTML string is possible using a special prefix)_.
+> Notice the 'nested' arrays above. The outer array is the container for _all_ children
+> of the created element and each inner array item defines a separate child element
+> and/or text node _(inserting an HTML string is possible using a special prefix)_.
 
 ```html
 <body>
@@ -95,13 +96,24 @@ d$.create(
 ```
 
 Form elements like `<input>`, `<select>` and `<textarea>` can also use 
-shorthand for `:type` and `?name` attributes.
+shorthand for `:type` and `?name` attributes. The example below uses
+these shortcuts along with a component-style pattern that may look
+slightly similar to patterns used in modern component-based frameworks/libraries.
 
 ```js
-const input = d$.create(
+const _SomeForm_ = (children) => d$.create('form#some-form', children);
+
+const _Input_ = () => d$.create(
   'input:text#id.a.b.c?name|value=foo|required'
 );
-const select = d$.create(
+
+const _Option_ = ({ value, ...other }, children) => d$.create(
+  'option',
+  { attr: { value }, ...other },
+  children || value
+);
+
+const _Select_ = () => d$.create(
   'select?country|value=United States|required',
   [
     // quotes are optional for attribute values
@@ -113,13 +125,16 @@ const select = d$.create(
     [`option|value='Mexico'`],
     // *values* with quotation marks *must* have outer quotes 
     // ...using standard syntax for nested quotes
-    [`option|value="'etc...'"`] 
+    [`option|value="'etc...'"`],
+    // using component-style pattern w/chained instance method
+    _Option_({ value: 'United Kingdom' }).text('UK') // .text() will overwrite textContent
   ]
 );
 
-const someForm = d$.create('form#some-form', [input, select]);
-
-d$.render(someForm, '#form-container');
+d$.render(_SomeForm_([
+  _Input_(),
+  _Select_()
+]), '#form-container');
 ```
 ```html
 <div id="form-container">
