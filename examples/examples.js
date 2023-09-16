@@ -92,11 +92,11 @@ import { devmode } from '../src/domageUtils.js';
 
   function doPerf(label, fn) {
     let count = 50_000;
-    let i = 0;
+    let i = -1;
     const start = performance.now();
     let magic = true;
     const results = [];
-    while (count > i++) {
+    while (++i < count) {
       results.push(fn());
       magic = !magic;
     }
