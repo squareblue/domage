@@ -8,10 +8,10 @@ import {
   isNode,
   isPlainObject,
   isString,
-  nope,
   splitClass
 } from './domageUtils.js';
 import { parseRE, parseTag } from './parseTag.js';
+import { dquery } from './dquery.js';
 
 export const ___HTML___ = '___HTML___';
 const re_HTML = new RegExp(`^\s*${___HTML___}\s*`);
@@ -41,6 +41,8 @@ export class Domage {
       style: _this.style,
       css: _this.css,
       className: _this.className,
+      dataset: _this.dataset,
+      data: _this.data,
       text: _this.text,
       ___HTML___: _this.___HTML___,
       append: _this.append,
@@ -132,10 +134,14 @@ export class Domage {
   /**
    * Handle style as an attribute string or object
    * @param {HTMLElement} element
-   * @param {string|Object} css
+   * @param {string|Object|null} css
    * @returns {HTMLElement}
    */
   static style(element, css = {}) {
+    if (!css) {
+      element.removeAttribute('style');
+      return element;
+    }
     if (isElement(element)) {
       try {
         if (isString(css)) {
@@ -295,11 +301,6 @@ export class Domage {
       return parent;
     }
 
-    if (isPlainObject(child)) {
-      parent.appendChild(Domage.create(child).get());
-      return parent;
-    }
-
     if (isNode(child)) {
       parent.appendChild(child);
       return parent;
@@ -307,6 +308,11 @@ export class Domage {
 
     if (child instanceof Domage) {
       parent.appendChild(child.get());
+      return parent;
+    }
+
+    if (isPlainObject(child)) {
+      parent.appendChild(Domage.create(child).get());
       return parent;
     }
 
@@ -386,10 +392,13 @@ export class Domage {
     if (isArray($tag)) {
       [tag, props = {}, children = ''] = $tag;
     } else if (isPlainObject($tag)) {
-      (tag = $tag.tag || '') && delete $tag.tag;
-      (props = isPlainObject($tag.props) ? $tag.props : {}) && delete $tag.props;
-      (children = $tag.children || '') && delete $tag.children;
-      // Assign 'leftover' properties to `props`
+      tag = $tag.tag || '';
+      props = isPlainObject($tag.props) ? $tag.props : {};
+      children = $tag.children || '';
+      delete $tag.tag;
+      delete $tag.props;
+      delete $tag.children;
+      // Assign 'leftover' properties from `$tag` to `props`
       Object.assign(props, $tag);
     }
 
@@ -422,20 +431,20 @@ export class Domage {
     const d$ = new Domage(tag, props, children);
 
     for (let [method, ...args] of Object.entries(props)) {
-      // Handle props with defined methods
+      // Handle props with defined *instance* methods
       if (Domage.#hasMethod(method)) {
         d$[method](...args);
         continue;
       }
       // Handle $attr shortcut
-      if (method.startsWith('$')) {
+      if (method.charAt(0) === '$') {
         d$.attr({
           [method.slice(1)]: args
         });
         continue;
       }
       // Handle _prop shortcut
-      if (method.startsWith('_')) {
+      if (method.charAt(0) === '_') {
         d$.prop({
           [method.slice(1)]: args
         });
@@ -490,6 +499,12 @@ export class Domage {
     return this;
   }
 
+  exe(fn) {
+    if (isFunction(fn)) {
+      fn(this);
+    }
+  }
+
   get() {
     return this.element || this.fragment;
   }
@@ -501,14 +516,21 @@ export class Domage {
  * Main exposed function.
  * @param {string|[string, Object|Children, Children]|Object} argd
  * @param {string|Node|document} [context]
- * @returns {Domage|Node}
+ * @returns {Domage|Node|Object}
  */
 export function d$(argd, context = document) {
   if (isArray(argd)) {
     return Domage.create(...argd);
   }
   if (isString(argd)) {
-    return dquery(argd, context).get();
+    const d$All = dquery(argd, context).all().map(elem => new Domage(elem));
+    return {
+      all: () => d$All,
+      get: (idx) => d$All[idx || 0],
+      map: (fn) => d$All.map(fn),
+      each: (fn) => d$All.forEach(fn),
+      getElement: (idx) => d$All.get(idx || 0)
+    }
   }
   if (isPlainObject(argd)) {
     return Domage.create(argd);
@@ -519,205 +541,8 @@ export function d$(argd, context = document) {
 d$.create = Domage.create;
 d$.render = Domage.render;
 
-//////////////////////////////////////////////////
-////////// dquery ////////////////////////////////
-//////////////////////////////////////////////////
-
-// Map custom speedy selectors to their functions
-const selectorMap = {
-  '^/': getElement,
-  '$/': getElement,
-  '**': getElements,
-  '*/': getElements,
-  '//': getElements,
-  '$$': getElements,
-  'id:': getById,
-  '#/': getById,
-  'class:': getByClass,
-  '..': getByClass,
-  '.:': getByClass,
-  './': getByClass,
-  '</': getByTag,
-  '~/': getByTag,
-  '?/': getByName,
-  '@/': getByAttribute,
-};
-
-const selectorPrefixes = Object.keys(selectorMap);
-devmode() && console.log('selectorPrefixes', selectorPrefixes);
-
-/**
- * Get the minimum and maximum lengths of the prefix strings (keys) above
- * @type {[number, number]} // Returns tuple of min, max lengths
- */
-const prefixLengths = selectorPrefixes.reduce(([min, max], key) => {
-  return [
-    key.length < min ? key.length : min,
-    key.length > max ? key.length : max
-  ];
-}, [99, -99]);
-
-devmode() && console.log('prefixLengths', prefixLengths);
-
-function slicePrefix(selector, prefixLength) {
-  const sliceAt = (-selector.length + prefixLength);
-  const prefix = selector.slice(0, sliceAt);
-  const value = selector.slice(sliceAt);
-  return {
-    selector: value.trim(),
-    prefix: prefix
-  };
-}
-
-/**
- * Always return an array of selected elements.
- * @param {string} selector
- * @param {Function} [selectFn]
- * @param {string|Element|Document} [context]
- * @returns {*[]}
- */
-function selectElements(selector, selectFn, context) {
-  // getElement() and getById() always return a single element...
-  return (selectFn === getElement || selectFn === getById)
-    ? [selectFn(selector, context)]  /* ...so wrap it in an array. */
-    : [].concat(selectFn(selector, context))
-}
-
-function dqResult(selected) {
-  return {
-    all: () => selected,
-    get: (idx) => selected[idx || 0],
-    exe: (fn) => fn(selected)
-  };
-}
-
-/**
- * Select DOM elements using optional special syntax.
- * @param {string} selector
- * @param {string|Node|document} [context]
- * @returns {*}
- */
-export function dq(selector, context = document) {
-  devmode() && console.log('dq', selector);
-  if (isElement(selector)) {
-    return dqResult([selector]);
-  }
-  let [prefixMin, prefixMax] = prefixLengths;
-  let selectFn = nope;
-  let trimmedSelector = selector.trim();
-  let parsedSelector = trimmedSelector;
-  while (prefixMax >= prefixMin && selectFn === nope) {
-    const parsed = slicePrefix(trimmedSelector, prefixMax);
-    if (selectorMap[parsed.prefix]) {
-      parsedSelector = parsed.selector;
-      selectFn = selectorMap[parsed.prefix];
-    }
-    prefixMax--;
-  }
-  // Use updated selectFn, or if it's still nope(), use getElements instead
-  const selected = selectElements(
-    parsedSelector,
-    (selectFn !== nope) ? selectFn : getElements,
-    context
-  );
-  // return object with `.all()`, `.get()`, and `.exe()` methods
-  // TODO: use class instead so we can have an .update() function
-  //  that pushes the new items into the `selected` array.
-  //  class DQ { all; get; exe; refresh; }
-  return dqResult(selected);
-}
-
-// Example:
-export const selectorExamples = () => {
-  // Returns single element with [id="foo-id"]
-  // Uses *very* fast .getElementById('foo-id') under the hood.
-  const fooId = dq('#/foo-id').get();
-  // Returns array of elements with [class="bar-baz"] that are descendents of `fooId`
-  // Uses *very* fast .getElementsByClassName('bar-baz') under the hood.
-  const barBaz = dq('./bar-baz', fooId).all();
-};
-
-/**
- * Resolve parent element for selecting only its children
- * @param {string|Element|Document} [context]
- * @returns {Element|Document}
- */
-function resolveContext(context = document) {
-  if (context === document || isElement(context)) {
-    return context;
-  }
-  if (isString(context)) {
-    return document.querySelector(context);
-  }
-  return document;
-}
-dq.resolveContext = resolveContext;
-
-function getElement(selector, context) {
-  if (isElement(selector)) {
-    return selector;
-  }
-  return resolveContext(context).querySelector(selector);
-}
-dq.getElement = getElement;
-dq.query = getElement;
-dq.get = getElement;
-
-function getElements(selector, context) {
-  return [...resolveContext(context).querySelectorAll(selector)];
-}
-dq.getElements = getElements;
-dq.queryAll = getElements;
-dq.getAll = getElements;
-
-function getById(id) {
-  return document.getElementById(id);
-}
-dq.getById = getById;
-dq.byId = getById;
-
-function getByClass(className, context) {
-  let selector = className.trim();
-  let classes = [selector];
-  let queryFn = 'getElementsByClassName';
-  // Handle selection of elements with multiple class values
-  // (either space- or period-separated)
-  if (/[\s.]/.test(selector)) {
-    classes = selector.split(/\s*[.\s]+\s*/);
-    selector = `.${classes.join('.')}`;
-    queryFn = 'querySelectorAll';
-  }
-  // ...maybe just use dq.getElements('.foo.bar.baz')?
-  return [...resolveContext(context)[queryFn](selector)];
-}
-dq.getByClass = getByClass;
-dq.byClass = getByClass;
-
-function getByTag(tagName, context) {
-  return [...resolveContext(context).getElementsByTagName(tagName)];
-}
-dq.getByTag = getByTag;
-dq.byTag = getByTag;
-
-function getByName(name, context) {
-  return [...resolveContext(context).getElementsByName(name)];
-}
-dq.getByName = getByName;
-dq.byName = getByName;
-
-function getByAttribute(attr, context) {
-  return [...resolveContext(context).querySelectorAll('[' + attr + ']')];
-}
-dq.getByAttribute = getByAttribute;
-dq.byAttribute = getByAttribute;
-dq.byAttr = getByAttribute;
-
-d$.dq = dq;
-d$.dquery = dq;
-
 d$.getCount = () => counter;
 
-export const dquery = dq;
 export default d$;
 
 // Add to `window` object to 'export' globally
