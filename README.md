@@ -14,9 +14,11 @@ Basic anatomy of `d$.create()` function parameters:
 ```js
 // Define the parameters:
 const args = [
+  // Tag string (shown with shorthand syntax)
   'tag#id.a.b.c|attr=X|etc=values|required',
+  // 'Props' object
   { attr: { foo: 'A' }, $bar: 1, _baz: 'C' },
-  // Note nested array for children...
+  // Children containing parameter arrays, elements, or strings...
   [
     ['p.child', 'Child paragraph.'], 
     ['hr'],
@@ -30,9 +32,9 @@ d$.create(...args).appendTo(document.body);
 d$.create(...args).render(document.body);
 ```
 
-> Notice the 'nested' arrays above. The outer array is the container for _all_ children
-> of the created element and each inner array item defines a separate child element
-> and/or text node _(inserting an HTML string is possible using a special prefix)_.
+[//]: # (> Notice the nested arrays above. The outer array is the container for _all_ children)
+[//]: # (> of the created element and each inner array item defines a separate child element)
+[//]: # (> and/or text node _&#40;inserting an HTML string is possible using an object or special prefix&#41;_.)
 
 ```html
 <body>
