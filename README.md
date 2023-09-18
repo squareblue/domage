@@ -59,7 +59,7 @@ d$.create(
     attr: {
       attrName: 'attrValue'
     },
-    // Sets a property directly on the element
+    // Sets a property value directly on the element
     prop: {
       propName: 'propValue'
     },
@@ -71,6 +71,10 @@ d$.create(
     className: 'a b c',
     style: { 
       display: 'block'
+    },
+    data: {
+      // Adds [data-foo-bar="baz"] attribute
+      fooBar: 'baz'
     }
     // TODO: event handlers using syntax like
     //  `on: { event: doSomething }` 
@@ -176,7 +180,8 @@ argument. You can also save a reference to the created instance for later manipu
 > the generated element. The functionality and syntax is similar to `jQuery` -
 > like `.attr({})`, `.prop({})`, `.addClass('')`, `.removeClass('')`,
 > and `.data({})` (or `.dataset({})`). You can also append child elements or
-> parameter arrays after the parent has been instantiated and inserted into the DOM.
+> parameter arrays using the `.append()` method, even after the parent has been 
+> instantiated and inserted into the DOM.
 
 ```js
 import d$ from 'domage';
@@ -198,8 +203,8 @@ const coolP = d$([
   ]
 ]);
 
-// Later... add an attribute based on some condition
-// using the `.attr()` instance method
+// Later... add a [data-*] attribute based on some condition
+// using the `.data({})` instance method
 if (someCondition) {
   coolP.data({
     'thing': 'Stuff'
