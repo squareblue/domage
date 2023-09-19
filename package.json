@@ -4,10 +4,24 @@
   "description": "Do stuff with the DOM things.",
   "author": "Square Blue Dev",
   "license": "MIT",
-  "keywords": [],
-  "main": "main.js",
+  "keywords": [ ],
   "type": "module",
+  "files": [ "dist" ],
+  "module": "./dist/domage.es.js",
+  "main": "./dist/domage.cjs.js",
+  "exports": {
+    ".": {
+      "import": "./dist/domage.es.js",
+      "require": "./dist/domage.cjs.js"
+    }
+  },
   "scripts": {
+    "dev": "vite",
+    "preview": "vite preview",
+    "build": "vite build",
     "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "vite": "~4.4.9"
   }
 }

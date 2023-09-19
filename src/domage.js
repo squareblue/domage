@@ -11,7 +11,7 @@ import {
   splitClass
 } from './domageUtils.js';
 import { parseRE, parseTag } from './parseTag.js';
-import { dquery } from './dquery.js';
+import dquery from './dquery.js';
 
 export const ___HTML___ = '___HTML___';
 const re_HTML = new RegExp(`^\s*${___HTML___}\s*`);
@@ -501,7 +501,7 @@ export class Domage {
 
   exe(fn) {
     if (isFunction(fn)) {
-      fn(this);
+      fn(this.get(), this);
     }
   }
 
@@ -518,7 +518,7 @@ export class Domage {
  * @param {string|Node|document} [context]
  * @returns {Domage|Node|Object}
  */
-export function d$(argd, context = document) {
+function d$(argd, context = document) {
   if (isArray(argd)) {
     return Domage.create(...argd);
   }
@@ -542,6 +542,8 @@ d$.create = Domage.create;
 d$.render = Domage.render;
 
 d$.getCount = () => counter;
+
+d$.dq = d$.dquery = dquery;
 
 export default d$;
 

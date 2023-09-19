@@ -76,7 +76,7 @@ function dqResult(selected) {
  * @param {string|Node|document} [context]
  * @returns {*}
  */
-export function dq(selector, context = document) {
+function dq(selector, context = document) {
   devmode() && console.log('dq', selector);
   if (isElement(selector)) {
     return dqResult([selector]);
@@ -107,7 +107,7 @@ export function dq(selector, context = document) {
 }
 
 // Example:
-export const selectorExamples = () => {
+const selectorExamples = () => {
   // Returns single element with [id="foo-id"]
   // Uses *very* fast .getElementById('foo-id') under the hood.
   const fooId = dq('#/foo-id').get();
@@ -192,7 +192,10 @@ dq.byAttribute = getByAttribute;
 dq.byAttr = getByAttribute;
 
 // 'dquery' named export;
-export const dquery = dq;
+// export const dquery = dq;
 
 // dq function is default
 export default dq;
+
+// Add to `window` object to 'export' globally
+window.dq = window.dquery = dq;
