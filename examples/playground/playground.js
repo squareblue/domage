@@ -1,5 +1,5 @@
-import '../main.js';
-import { devmode } from '../src/domageUtils.js';
+import '../../main.js';
+import { devmode } from '../../src/domageUtils.js';
 
 ((domage) => {
   const d$ = domage;
@@ -92,11 +92,11 @@ import { devmode } from '../src/domageUtils.js';
 
   function doPerf(label, fn) {
     let count = 50_000;
-    let i = -1;
+    let i = 0;
     const start = performance.now();
     let magic = true;
     const results = [];
-    while (++i < count) {
+    while (count > i++) {
       results.push(fn());
       magic = !magic;
     }
