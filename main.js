@@ -1,4 +1,3 @@
-// What is this tomfoolery?
 import d$ from './src/domage.js';
 import dq from './src/dquery.js';
 export * from './src/dquery.js';
