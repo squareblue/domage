@@ -1,5 +1,5 @@
-import '../main.js';
-import { devmode } from '../src/domageUtils.js';
+import '../../main.js';
+import { devmode } from '../../src/domageUtils.js';
 
 ((domage) => {
   const d$ = domage;

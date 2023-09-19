@@ -14,9 +14,11 @@ Basic anatomy of `d$.create()` function parameters:
 ```js
 // Define the parameters:
 const args = [
+  // Tag string (shown with shorthand syntax)
   'tag#id.a.b.c|attr=X|etc=values|required',
+  // 'Props' object
   { attr: { foo: 'A' }, $bar: 1, _baz: 'C' },
-  // Note nested array for children...
+  // Children containing parameter arrays, elements, or strings...
   [
     ['p.child', 'Child paragraph.'], 
     ['hr'],
@@ -30,9 +32,9 @@ d$.create(...args).appendTo(document.body);
 d$.create(...args).render(document.body);
 ```
 
-> Notice the 'nested' arrays above. The outer array is the container for _all_ children
-> of the created element and each inner array item defines a separate child element
-> and/or text node _(inserting an HTML string is possible using a special prefix)_.
+[//]: # (> Notice the nested arrays above. The outer array is the container for _all_ children)
+[//]: # (> of the created element and each inner array item defines a separate child element)
+[//]: # (> and/or text node _&#40;inserting an HTML string is possible using an object or special prefix&#41;_.)
 
 ```html
 <body>
@@ -57,7 +59,7 @@ d$.create(
     attr: {
       attrName: 'attrValue'
     },
-    // Sets a property directly on the element
+    // Sets a property value directly on the element
     prop: {
       propName: 'propValue'
     },
@@ -69,6 +71,10 @@ d$.create(
     className: 'a b c',
     style: { 
       display: 'block'
+    },
+    data: {
+      // Adds [data-foo-bar="baz"] attribute
+      fooBar: 'baz'
     }
     // TODO: event handlers using syntax like
     //  `on: { event: doSomething }` 
@@ -174,7 +180,8 @@ argument. You can also save a reference to the created instance for later manipu
 > the generated element. The functionality and syntax is similar to `jQuery` -
 > like `.attr({})`, `.prop({})`, `.addClass('')`, `.removeClass('')`,
 > and `.data({})` (or `.dataset({})`). You can also append child elements or
-> parameter arrays after the parent has been instantiated and inserted into the DOM.
+> parameter arrays using the `.append()` method, even after the parent has been 
+> instantiated and inserted into the DOM.
 
 ```js
 import d$ from 'domage';
@@ -196,8 +203,8 @@ const coolP = d$([
   ]
 ]);
 
-// Later... add an attribute based on some condition
-// using the `.attr()` instance method
+// Later... add a [data-*] attribute based on some condition
+// using the `.data({})` instance method
 if (someCondition) {
   coolP.data({
     'thing': 'Stuff'
