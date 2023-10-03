@@ -16,6 +16,7 @@ import { dquery } from './dquery.js';
 export const ___HTML___ = '___HTML___';
 const re_HTML = new RegExp(`^\s*${___HTML___}\s*`);
 
+let undef;
 let counter = 0;
 
 export class Domage {
@@ -199,26 +200,34 @@ export class Domage {
   /**
    * Add [data-*] attributes to element (using `dataset` property)
    * @param {HTMLElement} element
-   * @param {Object|Function} dataObj
-   * @returns {*}
+   * @param {Object|string|null} [prop]
+   * @param {null|string|Function} [value]
+   * @returns {string|DOMStringMap|Element}
+   *   - returns string value for `prop`, the entire `dataset` object or the element
    */
-  static dataset(element, dataObj = {}) {
+  static dataset(element, prop, value) {
     if (isElement(element)) {
-      let obj = isFunction(dataObj)
-        ? dataObj(element)
-        : dataObj;
-
-      if (!isPlainObject(obj)) {
-        // Return early if we're not working with an object
-        console.warn('Not an object.', obj);
-        return element;
-      }
-
       try {
-        for (const [prop, value] of Object.entries(dataObj)) {
-          element.dataset[prop] = Domage.#asValue(value, element);
+        if (value === undef) {
+          // Recommended pattern: Domage.data({ foo: 'bar' })
+          if (isPlainObject(prop)) {
+            for (const [_prop, _value] of Object.entries(prop)) {
+              element.dataset[_prop] = Domage.#asValue(element, _value);
+            }
+            return element;
+          }
+
+          if (isString(prop)) {
+            return element.dataset[prop]
+          }
+
+          if (prop === undef) {
+            return element.dataset;
+          }
         }
-      } catch (e) {
+        element.dataset[prop] = Domage.#asValue(value);
+      }
+      catch (e) {
         console.error(`Could not set [data-*] attribute(s).`, e);
       }
     }
@@ -229,8 +238,8 @@ export class Domage {
   }
   static data = Domage.dataset;
 
-  dataset(dataObj) {
-    this.element = Domage.dataset(this.element, dataObj);
+  dataset(data = null) {
+    Domage.dataset(this.element, data);
     return this;
   }
   data = this.dataset;
