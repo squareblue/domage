@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Domage Example - Todos</title>
+  <style>
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background-color: lightgray;
+      overflow-y: scroll;
+    }
+  </style>
+</head>
+<body>
+<div id="app">
+  <!-- elements render here -->
+</div>
+<script type="module">
+  import d$, { HTML } from '../../src/domage.js';
+
+  const randomHex = () => (
+    Math.floor(Math.random() * ((256 ** 3) - 1)).toString(16)
+  );
+
+  const nbsp = (n = 1) => (
+    HTML + (new Array(n)).fill('&nbsp;').join('')
+  );
+
+  const stateMap = new Map();
+
+  function manageState(key, init) {
+    stateMap.set(key, init);
+    return [
+      // 'getter'
+      () => {
+        return stateMap.get(key);
+      },
+      // 'setter'
+      (val) => {
+        stateMap.set(key, (
+          typeof val === 'function'
+            ? val(stateMap.get(key))
+            : val
+        ));
+        return stateMap.get(key);
+      }
+    ]
+  }
+
+  const [getTodos, setTodos] = manageState('todos', []);
+  const [isRandom, setRandom] = manageState('colors', false);
+
+  console.log('isRandom()', isRandom());
+
+  const randomizeCkbx_ = d$.create([
+    'input:checkbox?randomize|title=Randomize Colors',
+    {
+      _checked: isRandom(),
+      style: {
+        height: '1rem',
+        width: '1rem'
+      }
+    }
+  ]);
+
+  randomizeCkbx_.get().addEventListener('change', ({ target: ckbx }) => {
+    console.log(ckbx);
+    setRandom(ckbx.checked);
+  });
+
+  const p_ = d$.create([
+    'p#hi.hello',
+    { $title: 'Hi' },
+    [
+      ['div|style=display:flex;align-items:center;justify-content:space-between;', [
+        ['span', 'Hi. 👋'],
+        ['span', [
+          ['label|style=display:flex;align-items:center', [
+            'use random colors',
+            nbsp(1),
+            randomizeCkbx_
+          ]]
+        ]]
+      ]]
+    ]
+  ]);
+
+  if (Date.now() > 1) {
+    p_.addClass('yo');
+  }
+
+  const ul_ = d$.create('ul#todos');
+
+  function removeTodo(id) {
+    ul_.replaceChildren([
+      '',
+      setTodos(todos => todos.filter(item => item.data('id') !== id))
+    ]);
+  }
+
+  const handleDelete = (e) => {
+    console.log('delete', e);
+    removeTodo(e.target.dataset.id);
+  };
+
+  // Use 'component' pattern to generate multiple element instances.
+  const _DeleteButton_ = (id) => {
+    return (
+      d$.create([
+          'button:button.delete-item', {
+            style: {
+              // width: '1.5rem',
+              // height: '1.5rem'
+            },
+            data: { id },
+            // on: [
+            //   ['click', handleDelete],
+            //   ['mouseover', (e) => console.log(e)]
+            // ]
+          }, [
+            HTML + '&times;'
+          ]
+        ])
+        .on('click', handleDelete)
+        .on('mouseover', (e) => console.log(e))
+    );
+  };
+
+  // Use 'component' pattern.
+  const _ToDoItem_ = (id, text) => d$.create([
+    'li',
+    {
+      data: { id },
+      style: {
+        margin: '0.25rem 0',
+        padding: '0.25rem 0.5rem',
+        border: `1px solid #${isRandom() ? randomHex() : 'c0c0c0'}`,
+        backgroundColor: `#${isRandom() ? randomHex() : 'f0f0f0'}`,
+      }
+    },
+    [
+      ['div', {
+        style: {
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          color: `#${isRandom() ? randomHex() : '505050'}`,
+        },
+      },
+        [
+          ['span.todo-text', text || '???'],
+          ['span', [
+            ['span.todo-time', (new Date(+id.slice(1))).toLocaleString()],
+            nbsp(2),
+            _DeleteButton_(id)
+          ]]
+        ]
+      ]
+    ]
+  ]);
+
+  function addTodo(id, text) {
+    console.log('addTodo');
+    setTodos(todos => [
+      ...todos,
+      _ToDoItem_(id, text)
+    ]);
+    ul_.replaceChildren(['', getTodos()]);
+    // return todoItem;
+  }
+
+  let todoInput_ = '';
+
+  const form_ = d$.create([
+    'form#todos-form|action=#', [
+      // Save a reference to the input as it's created
+      (todoInput_ = d$.create([
+        'input:text.todo-input?todoInput|placeholder=new todo|style=padding:0 0.5rem',
+      ])),
+      ' ',
+    ]
+  ]);
+
+  form_.style({ marginTop: '1rem' });
+
+  function handleSubmit(e) {
+    console.log(e);
+    e.preventDefault();
+    addTodo(`i${Date.now()}`, todoInput_.get().value);
+    todoInput_.get().value = '';
+  }
+
+  // TODO: add `.on()` methods
+  form_.on('submit', handleSubmit);
+
+  const addButton_ = d$.create([
+    'button:submit',
+    'Add Todo'
+  ]).appendTo(form_);
+
+  // Append components here:
+  p_.append(form_);
+  p_.append(ul_);
+
+  // Add styling for everything in one place:
+  p_.style({
+    width: '600px',
+    minHeight: '100vh',
+    margin: '0 auto',
+    padding: '2rem',
+    fontFamily: 'Arial',
+    color: 'cornflowerblue',
+    backgroundColor: 'white',
+  });
+
+  ul_.style({
+    padding: 0,
+    listStyleType: 'none'
+  });
+
+  form_.style({
+    height: '2rem',
+    display: 'flex',
+    justifyContent: 'space-between',
+    gap: '1rem',
+  });
+
+  todoInput_.style({
+    width: '70%',
+    height: '100%',
+  });
+
+  addButton_.style({
+    width: '30%',
+    height: '100%',
+  });
+
+  // Add <p> to the DOM last to prevent unnecessary repaints/reflows
+  p_.renderTo('#/app');
+</script>
+</body>
+</html>

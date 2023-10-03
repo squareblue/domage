@@ -23,7 +23,7 @@ export const createRE = /^[\s<+=]*|[/>\s]*$/g;
  *            'class': 'bar',
  *            name: 'baz',
  *            title: 'Input text',
- *            checked: true
+ *            checked: 'checked'
  *          }];
  *
  * @example Used with a library that creates DOM elements (like `h` from SolidJS or React's non-JSX syntax)
