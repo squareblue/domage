@@ -1,4 +1,4 @@
-import { devmode, isElement, nope } from './domageUtils.js';
+import { devmode, isElement, isString } from './domageUtils.js';
 
 //////////////////////////////////////////////////
 ////////// dquery ////////////////////////////////
@@ -38,13 +38,10 @@ const prefixLengths = selectorPrefixes.reduce(([min, max], key) => {
 
 devmode() && console.log('prefixLengths', prefixLengths);
 
-function slicePrefix(selector, prefixLength) {
-  const sliceAt = (-selector.length + prefixLength);
-  const prefix = selector.slice(0, sliceAt);
-  const value = selector.slice(sliceAt);
+function slicePrefix(str, len = 2) {
   return {
-    selector: value.trim(),
-    prefix: prefix
+    selector: str.slice(len),
+    prefix: str.slice(0, len)
   };
 }
 
@@ -62,48 +59,52 @@ function selectElements(selector, selectFn, context) {
     : [].concat(selectFn(selector, context))
 }
 
-function dqResult(selected) {
-  return {
-    all: () => selected,
-    get: (idx) => selected[idx || 0],
-    exe: (fn) => fn(selected)
-  };
+class DQResult {
+  constructor(selected) {
+    this.selected = selected;
+  }
+  all() {
+    return [].concat(this.selected);
+  }
+  get(idx) {
+    return this.all()[idx || 0];
+  }
+  each(fn) {
+    return this.all().forEach(fn);
+  }
+  forEach = this.each;
+  map(fn) {
+    return this.all().map(fn);
+  }
 }
 
 /**
  * Select DOM elements using optional special syntax.
  * @param {string} selector
  * @param {string|Node|document} [context]
- * @returns {*}
+ * @returns {DQResult}
  */
 export function dq(selector, context = document) {
   devmode() && console.log('dq', selector);
-  if (isElement(selector)) {
-    return dqResult([selector]);
-  }
-  // let [prefixMin, prefixMax] = prefixLengths;
-  let selectFn = nope;
-  let trimmedSelector = selector.trim();
-  let parsedSelector = trimmedSelector;
-  // while (prefixMax >= prefixMin && selectFn === nope) {
+
+  // Handle most common case first
+  if (isString(selector)) {
+    let trimmedSelector = selector.trim();
     const parsed = slicePrefix(trimmedSelector, 2);
-    if (selectorMap[parsed.prefix]) {
-      parsedSelector = parsed.selector;
-      selectFn = selectorMap[parsed.prefix];
-    }
-    // prefixMax--;
-  // }
-  // Use updated selectFn, or if it's still nope(), use getElements instead
-  const selected = selectElements(
-    parsedSelector,
-    (selectFn !== nope) ? selectFn : getElements,
-    context
-  );
-  // return object with `.all()`, `.get()`, and `.exe()` methods
-  // TODO: use class instead so we can have an .update() function
-  //  that pushes the new items into the `selected` array.
-  //  class DQ { all; get; exe; refresh; }
-  return dqResult(selected);
+    // Use updated selectFn, or if it's still nope(), use getElements instead
+    const selected = selectElements(
+      parsed.selector,
+      selectorMap[parsed.prefix] || getElements,
+      context
+    );
+    // return class instance with methods:
+    // `.all()`, `.get()`, `.each()`, and `.map()`
+    return new DQResult(selected);
+  }
+
+  if (isElement(selector)) {
+    return new DQResult([selector]);
+  }
 }
 
 // Example:
@@ -114,6 +115,7 @@ export const selectorExamples = () => {
   // Returns array of elements with [class="bar-baz"] that are descendents of `fooId`
   // Uses *very* fast .getElementsByClassName('bar-baz') under the hood.
   const barBaz = dq('./bar-baz', fooId).all();
+  return { fooId, barBaz };
 };
 
 /**
