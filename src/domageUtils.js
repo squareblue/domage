@@ -48,7 +48,7 @@ export function isFragment(it) {
 
 export function isNode(it) {
   return (
-    isElement(it) || isFunction(it) || it instanceof Node
+    isElement(it) || isFragment(it) || it instanceof Node
   )
 }
 
@@ -85,7 +85,7 @@ export function camelCase(str) {
 }
 
 export function splitClass(className) {
-  return [].concat(className).join(' ').split(/\s+/);
+  return [].concat(className).join(' ').trim().split(/\s+/);
 }
 
 export function devmode(fn) {
