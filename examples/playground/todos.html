@@ -188,7 +188,6 @@
   form_.style({ marginTop: '1rem' });
 
   function handleSubmit(e) {
-    console.log(e);
     e.preventDefault();
     addTodo(`i${Date.now()}`, todoInput_.get().value);
     todoInput_.get().value = '';

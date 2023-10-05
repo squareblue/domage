@@ -14,10 +14,25 @@ import { parseRE, parseTag } from './parseTag.js';
 import { dquery } from './dquery.js';
 
 export const ___HTML___ = '___HTML___';
+export const HTML = ___HTML___;
 const re_HTML = new RegExp(`^\s*${___HTML___}\s*`);
 
 let undef;
 let counter = 0;
+
+/**
+ * Types
+ * @typedef {{
+ *    tag: string,
+ *    props: Object|Children,
+ *    children: Children,
+ *    [k: string]: *
+ *  }} TagObject
+ * @typedef {TagArg|TagArg[]} TagArgs
+ * @typedef {string|TagArgs|TagObject} TagArg
+ * @typedef {DomageArgs[]|Node|string|number|Domage|Children[]} Children
+ * @typedef {[string, Object, Children]} DomageArgs
+ */
 
 export class Domage {
   tag = '';
@@ -212,7 +227,7 @@ export class Domage {
           // Recommended pattern: Domage.data({ foo: 'bar' })
           if (isPlainObject(prop)) {
             for (const [_prop, _value] of Object.entries(prop)) {
-              element.dataset[_prop] = Domage.#asValue(element, _value);
+              element.dataset[_prop] = Domage.#asValue(_value, element);
             }
             return element;
           }
@@ -225,7 +240,7 @@ export class Domage {
             return element.dataset;
           }
         }
-        element.dataset[prop] = Domage.#asValue(value);
+        element.dataset[prop] = Domage.#asValue(value, element);
       }
       catch (e) {
         console.error(`Could not set [data-*] attribute(s).`, e);
@@ -238,8 +253,18 @@ export class Domage {
   }
   static data = Domage.dataset;
 
-  dataset(data = null) {
-    Domage.dataset(this.element, data);
+  dataset(data) {
+    if (data === undef) {
+      return this.element.dataset;
+    }
+    if (isString(data)) {
+      return this.element.dataset[data];
+    }
+    if (isPlainObject(data)) {
+      for (const [prop, value] of Object.entries(data)) {
+        this.element.dataset[prop] = value;
+      }
+    }
     return this;
   }
   data = this.dataset;
@@ -366,20 +391,6 @@ export class Domage {
   static #hasMethod(method) {
     return isFunction(Domage.#fns[method]);
   }
-
-  /**
-   * Types
-   * @typedef {{
-   *    tag: string,
-   *    props: Object|Children,
-   *    children: Children,
-   *    [k: string]: *
-   *  }} TagObject
-   * @typedef {TagArg|TagArg[]} TagArgs
-   * @typedef {string|TagArgs|TagObject} TagArg
-   * @typedef {DomageArgs[]|Node|string|number|Domage|Children[]} Children
-   * @typedef {[string, Object, Children]} DomageArgs
-   */
 
   /**
    * Main element creation static method

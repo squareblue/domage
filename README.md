@@ -1,6 +1,6 @@
 # DOMAGE
 
-<small>DOM damage? _(performance unknown)_</small>
+[//]: # (<small>DOM damage? _&#40;performance unknown&#41;_</small>)
 
 Basic functionality for creating and selecting actual DOM nodes,
 allowing for programmatically creating and modifying UI elements on-the-fly.
