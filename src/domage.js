@@ -62,6 +62,7 @@ export class Domage {
       text: _this.text,
       ___HTML___: _this.___HTML___,
       append: _this.append,
+      on: _this.on
     });
 
     if (isElement(tag)) {
@@ -387,6 +388,18 @@ export class Domage {
     return this;
   }
   replaceChildren = this.replace;
+
+  static on(element, events) {
+    for (const [eventType, eventHandler] of Object.entries(events)) {
+      element.addEventListener(eventType, ...[].concat(eventHandler));
+    }
+    return element;
+  }
+
+  on(events) {
+    Domage.on(this.element, events);
+    return this;
+  }
 
   static #hasMethod(method) {
     return isFunction(Domage.#fns[method]);
