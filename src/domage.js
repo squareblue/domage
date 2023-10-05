@@ -466,23 +466,19 @@ export class Domage {
     const d$ = new Domage(tag, props, children);
 
     for (let [method, ...args] of Object.entries(props)) {
-      // Handle props with defined *instance* methods
-      if (Domage.#hasMethod(method)) {
-        d$[method](...args);
-        continue;
-      }
       // Handle $attr shortcut
       if (method.charAt(0) === '$') {
-        d$.attr({
-          [method.slice(1)]: args
-        });
+        d$.element.setAttribute(method.slice(1), Domage.#asValue(args[0], d$.element));
         continue;
       }
       // Handle _prop shortcut
       if (method.charAt(0) === '_') {
-        d$.prop({
-          [method.slice(1)]: args
-        });
+        d$.element[method.slice(1)] = Domage.#asValue(args[0], d$.element);
+        continue;
+      }
+      // Handle props with defined *instance* methods
+      if (Domage.#hasMethod(method)) {
+        d$[method](...args);
       }
     }
 
