@@ -366,7 +366,9 @@ export class Domage {
   }
 
   static empty(container) {
-    Domage.___HTML___(container, '');
+    while (container.hasChildNodes()) {
+      container.removeChild(container.firstChild);
+    }
     return container;
   }
 
