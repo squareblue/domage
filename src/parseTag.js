@@ -13,49 +13,58 @@ export const createRE = /^[\s<+=]*|[/>\s]*$/g;
 
 /**
  * Return a tuple with the tagName and an object containing element attributes.
- * @param {string} tag - tag string with optional attributes
- * @returns {[string, {}]} - returns tuple with tag and attributes object
  *
- * @example parseTag('input:checkbox#foo.bar?baz|title="Select Option"|checked');
- *     -->  ['input', {
- *            type: 'checkbox',
- *            id: 'foo',
- *            'class': 'bar',
- *            name: 'baz',
- *            title: 'Input text',
- *            checked: true
- *          }];
+ * @example
+ *         parseTag('input:checkbox#foo.bar?baz|title="Select Option"|checked');
+ *         // Output:
+ *         ['input', {
+ *           type: 'checkbox',
+ *           id: 'foo',
+ *           'class': 'bar',
+ *           name: 'baz',
+ *           title: 'Select Option',
+ *           checked: true
+ *         }];
+ *         // Would be used to render:
+ *         <input type="checkbox" id="foo" class="bar" name="baz" title="Select Option" checked />
  *
- * @example Used with a library that creates DOM elements (like `h` from SolidJS or React's non-JSX syntax)
+ * @example
+ *          // Used with a library that creates DOM elements (like `h` from SolidJS or React's non-JSX syntax)
  *          const [tag, attr] = parseTag('input:checkbox#subscribe.ckbx?subscribe|title="Subscribe"|checked');
  *          const { ['class']: className, ...props } = attr;
  *          props.className = props.className || className;
  *          React.createElement(tag, props);
- *     -->  <input type="checkbox" id="subscribe" class="ckbx" name="subscribe" title="Input text" checked />
+ *          // Output:
+ *          <input type="checkbox" id="subscribe" class="ckbx" name="subscribe" title="Subscribe" checked />
  *
- * @example Q: Why would something like this be useful?
- *          A: Let's say we're working with a system that uses YAML to generate a DOM tree. 😳
- *             In this example there are arrays of objects used to build the DOM...
- *             ...the properties are tag strings, the values are the 'children'.
- *          ---
+ * @example
+ *          // Q: Why would something like this be useful?
+ *          // A: Let's say we're working with a system that uses YAML to generate a DOM tree. 😳
+ *          //    In this example there are arrays of objects used to build the DOM...
+ *          //    ...the properties are tag strings, the values are the 'children'.
+ *          // ---
  *          - 'main.content':
  *            - 'h2#about.text-xl.mx-2.p-4|title="About"': "About Us"
  *            - 'p.mx-2.p-4': "Here's what we're about..."
- *          (there's a function that processes the above YAML and uses parseTag() to process the property names)
- *     -->  <main class="content">
+ *          // (there's a function that processes the above YAML and uses parseTag() to process the property names)
+ *          // Output:
+ *          <main class="content">
  *            <h2 id="about" class="text-xl mx-2 p-4" title="About">About Us</h2>
  *            <p class="mx-2 p-4">Here's what we're about...</p>
- *           </main>
+ *          </main>
+ *
+ * @param {string} tag - tag string with optional attributes
+ * @returns {[string, {}]} - returns tuple with tag and attributes object
  */
 export function parseTag(tag = '') {
+  // Return early if no shorthand values to parse
+  if (!parseRE.test(tag)) {
+    return [tag, null];
+  }
+
   // Don't try to handle fragments - they have no attributes.
   if (tag === '' || fragRE.test(tag)) {
     return ['', null];
-  }
-
-  if (!parseRE.test(tag)) {
-    // Return early if no shorthand values
-    return [tag, null];
   }
 
   let tagName, type, id, classes, name, tagAttrs;
@@ -95,26 +104,6 @@ export function parseTag(tag = '') {
 export default parseTag;
 
 /**
- * Convert 'class' and 'style' attributes to React-friendly props
- * @param {Object} attr - object to make React-friendly
- * @returns {{}} - returns object with 'className' string and 'style' object
- */
-export function reactProps(attr) {
-  const {
-    ['class']: className,
-    style,
-    ...props
-  } = attr;
-  if (className || props.className) {
-    props.className = props.className || className;
-  }
-  if (style) {
-    props.style = parseStyle(style);
-  }
-  return props;
-}
-
-/**
  * Convert 'style' string to style object
  * @param {string} style - style string to convert to object
  * @returns {{}|*} - returns style object
@@ -136,4 +125,24 @@ export function parseStyle(style) {
   } else {
     return style;
   }
+}
+
+/**
+ * Convert 'class' and 'style' attributes to React-friendly props
+ * @param {Object} attr - object to make React-friendly
+ * @returns {{}} - returns object with 'className' string and 'style' object
+ */
+export function reactProps(attr) {
+  const {
+    ['class']: className,
+    style,
+    ...props
+  } = attr;
+  if (className || props.className) {
+    props.className = props.className || className;
+  }
+  if (style) {
+    props.style = parseStyle(style);
+  }
+  return props;
 }
