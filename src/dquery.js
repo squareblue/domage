@@ -1,4 +1,4 @@
-import { devmode, isElement, nope } from './domageUtils.js';
+import { devmode, isElement, isString, nope } from './domageUtils.js';
 
 //////////////////////////////////////////////////
 ////////// dquery ////////////////////////////////
